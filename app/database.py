@@ -32,6 +32,7 @@ DB_SESSION = Annotated[AsyncSession, Depends(get_db)]
 int_pk = Annotated[int, mapped_column(primary_key=True)]
 str_uniq = Annotated[str, mapped_column(unique=True, nullable=False)]
 str_null = Annotated[str, mapped_column(nullable=True)]
+str_not_null = Annotated[str, mapped_column(nullable=False)]
 created_at = Annotated[datetime, mapped_column(server_default=func.now())]
 updated_at = Annotated[datetime, mapped_column(
     server_default=func.now(),
