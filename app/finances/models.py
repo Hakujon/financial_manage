@@ -8,6 +8,7 @@ class Expense(Base):
     id: Mapped[int_pk]
     name: Mapped[str_not_null]
     amount: Mapped[float]
+    category: Mapped[str_not_null]
     family_id: Mapped[int] = mapped_column(
         ForeignKey("familys.id"),
         nullable=False
