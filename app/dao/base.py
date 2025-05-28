@@ -7,8 +7,8 @@ class BaseDAO:
     model = None
 
     @classmethod
-    async def find_all(cls, session: AsyncSession):
-        query = select(cls.model)
+    async def find_all(cls, session: AsyncSession, **filter_by):
+        query = select(cls.model).filter_by(**filter_by)
         result = await session.execute(query)
         return result.scalars().all()
 
@@ -28,7 +28,7 @@ class BaseDAO:
             await session.rollback()
             raise e
         await session.refresh(new_instance)
-        return (new_instance)
+        return new_instance
 
     @classmethod
     async def delete(cls, session: AsyncSession, data_id: int):
