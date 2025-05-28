@@ -24,6 +24,7 @@ class Family(Base):
 class User(Base):
     id: Mapped[int_pk]
     username: Mapped[str_not_null]
+    telegram_id: Mapped[int]
     familys: Mapped[list["Family"]] = relationship(
         secondary="associations",
         back_populates="users",
