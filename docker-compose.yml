@@ -1,0 +1,61 @@
+services:
+ postgres:
+  image: postgres:17-alpine
+  env_file:
+   - .env
+  environment:
+   POSTGRES_DB: ${DB_NAME}
+   POSTGRES_USER: ${DB_USER}
+   POSTGRES_PASSWORD: ${DB_PASSWORD}
+  volumes:
+   - ./postgres-data:/var/lib/postgresql/data
+  ports:
+   - "${DB_PORT}:5432"
+  restart:
+   unless-stopped
+  healthcheck:
+   test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+   interval: 5s
+   timeout: 5s
+   retries: 5
+  logging:
+   driver: "json-file"
+   options:
+    max-size: "10m"
+    max-file: "5"
+    compress: "true"
+  networks:
+   - app_network
+
+ app:
+  build: ./
+  env_file:
+   - .env
+  ports:
+   - 8000:8000
+  restart:
+   unless-stopped
+  volumes:
+   - ./app:/project/app
+  depends_on:
+   postgres:
+    condition: service_healthy
+  networks:
+   - app_network
+
+ redis_bot:
+  image: redis:7
+  container_name: redis_bot
+  ports:
+   - 6379:6379
+  volumes:
+   - ./redis_bot_data:/data
+  command: ["redis-server", "--appendonly", "yes"]
+  networks:
+   - bot_network
+
+networks:
+ app_network:
+  name: app_network
+ bot_network:
+  name: bot_network
