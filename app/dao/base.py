@@ -1,6 +1,6 @@
 from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.exc.import SQLAlchemyError
+from sqlalchemy.exc import SQLAlchemyError
 
 
 class BaseDAO:
