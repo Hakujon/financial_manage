@@ -8,11 +8,6 @@ class Settings(BaseSettings):
     DB_HOST: str
     DB_NAME: str
 
-<<<<<<< HEAD
-    BOT_TOKEN: str
-
-=======
->>>>>>> 7b26a2fbb1f3cb3082f0e25bac535595c5a6c35a
     model_config = SettingsConfigDict(
         env_file=Path(__file__).parent.parent / ".env",
         extra="ignore"
@@ -23,8 +18,4 @@ class Settings(BaseSettings):
                 f"{self.DB_HOST}/{self.DB_NAME}")
 
 
-<<<<<<< HEAD
-settings = Settings()  # type: ignore
-=======
 settings = Settings() # type: ignore
->>>>>>> 7b26a2fbb1f3cb3082f0e25bac535595c5a6c35a
