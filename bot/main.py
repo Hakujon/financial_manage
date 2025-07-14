@@ -6,16 +6,20 @@ from aiogram import Bot, Dispatcher
 from aiogram.types import Message
 from aiogram.filters import CommandStart
 from aiogram.fsm.storage.redis import RedisStorage
+from aiogram.fsm.storage.base import DefaultKeyBuilder
 from aiogram import F
+from aiogram_dialog import setup_dialogs
 
 from bot.router import router
+from bot.dialog_router import router as dialog_router
 from bot.config import settings
 
 BOT_TOKEN: str = settings.BOT_TOKEN  # type: ignore
 
 redis = Redis(host="localhost", port=6379)
 
-storage = RedisStorage(redis=redis)
+storage = RedisStorage(redis=redis,
+                       key_builder=DefaultKeyBuilder(with_destiny=True))
 dp = Dispatcher(storage=storage)
 bot = Bot(token=BOT_TOKEN)
 
@@ -30,6 +34,8 @@ async def sending_ping(message: Message) -> None:
 
 
 dp.include_router(router=router)
+dp.include_router(router=dialog_router)
+setup_dialogs(dp)
 
 
 async def main() -> None:
