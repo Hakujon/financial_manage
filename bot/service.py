@@ -1,24 +1,29 @@
 from httpx import AsyncClient
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
-url_api = "http://localhost:8000/finance/"
 from bot.schemas import ExpenseFilter
+
+url_api = "http://localhost:8000/finance/"
 
 now = datetime.now()
 one_week_ago = datetime.now() - timedelta(weeks=1)
 one_month_ago = datetime.now() - relativedelta(months=1)
 
 this_week_start = datetime.now() - timedelta(days=now.weekday())
-this_week_start = this_week_start.replace(hour=0, minute=0, second=0, microsecond=0)
+this_week_start = this_week_start.replace(hour=0,
+                                          minute=0,
+                                          second=0,
+                                          microsecond=0)
 
-this_month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+this_month_start = now.replace(day=1,
+                               hour=0, minute=0, second=0, microsecond=0)
 
 
 def format_expense(expense: dict):
     created_at = datetime.fromisoformat(expense["created_at"]).strftime(
         "%d.%m.%Y"
         )
-    return f"{created_at}\n {expense['category']} - {expense['amount']}"
+    return f"{created_at}\n {expense['amount']} - {expense['category']}"
 
 
 async def get_exp_for_time(start_date: datetime,

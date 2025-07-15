@@ -1,32 +1,21 @@
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery
-from aiogram_dialog.widgets.kbd import Calendar
-from aiogram_dialog import Dialog, Window
+from aiogram.filters import Command
+from aiogram.fsm.context import FSMContext
 from bot.reply_keyboard import head_keyboard
-from bot.dao import (
+from bot.service import (
     get_categories,
-    get_exp_by_filters,
     get_this_month_exp,
     get_category_exp,
     get_this_week_exp,
-    create_filter
 )
-from bot.utiils import (
-    build_categories_keyboard, FSMFillForm,
-    build_date_keyboard
+from bot.inline_keyboards import (
+    build_categories_keyboard
 )
+from bot.utils import show_expenses
 
 
 router = Router()
-
-calendar_dialog = Dialog(
-    Window(
-        Calendar(
-            id="calendar"
-        ),
-        state=FSMFillForm.fill_date
-    )
-)
 
 
 @router.message(F.text.startswith("Запись"))
@@ -41,6 +30,14 @@ async def create_note(message: Message):
     )
 
 
+@router.message(Command("expenses"))
+async def show_keyboard(message: Message):
+    await message.answer(
+        text="Выберите расходы",
+        reply_markup=head_keyboard
+    )
+
+
 @router.message(F.text == "Расходы эта неделя")
 async def show_week_notes(message: Message):
     expenses = await get_this_week_exp()
@@ -49,7 +46,7 @@ async def show_week_notes(message: Message):
         return True
     await message.answer(
         text="Вот твои записи за эту неделю")
-    text = "\n\n".join(expense for expense in expenses)
+    text = "\n\n".join(expenses)
     await message.answer(text=text)
 
 
@@ -90,51 +87,8 @@ async def show_category_notes(callback: CallbackQuery):
     await callback.message.answer(text)
 
 
-# @router.message(F.text == "Фильтр")
-# async def start_filter(message: Message, state: FSMContext):
-#     date_keyboard = build_date_keyboard()
-#     await state.set_state(FSMFillForm.fill_date)
-#     await message.answer(text="Выбери дату",
-#                          reply_markup=date_keyboard.as_markup())
-
-
-# @router.callback_query(F.data.in_(["this_week", "this_month"]),
-#                        FSMFillForm.fill_date)
-# async def add_date_to_filter(callback: CallbackQuery, state: FSMContext):
-#     start_date = callback.data
-#     await state.update_data(start_date=start_date)
-#     categories = await get_categories()
-#     category_keyboard = build_categories_keyboard(categories)
-#     await state.set_state(FSMFillForm.fill_category)
-#     await callback.message.answer(text="Выбери категорию",
-#                                   reply_markup=category_keyboard.as_markup())
-
-
-# @router.callback_query(F.data.in_(["calendar"]),
-#                        FSMFillForm.fill_date)
-# async def set_calendar(callback: CallbackQuery, state: FSMContext,
-#                        dialog_manager: DialogManager):
-#     await dialog_manager.start(FSMFillForm.fill_date)
-
-
-
-
-
-
-# @router.callback_query(F.data.startswith("category:"), FSMFillForm.fill_category)
-# async def add_category_to_filter(callback: CallbackQuery, state: FSMContext):
-#     category = callback.data.split(":", 1)[1]
-#     await state.update_data(category=category)
-#     data = await state.get_data()
-#     filter = create_filter(
-#         start_date=data["start_date"],
-#         category=data["category"]
-#     )
-#     expenses = await get_exp_by_filters(filter=filter)
-#     if not isinstance(expenses, list):
-#         text = expenses
-#     else:
-#         text = "\n\n".join(
-#             expense for expense in expenses
-#         )
-#     await callback.message.answer(text)
+@router.callback_query(F.data.startswith("expenses_page:"))
+async def paginate_expenses(callback: CallbackQuery, state: FSMContext):
+    if callback.data:
+        page = int(callback.data.split(":")[1])
+    await show_expenses(callback, page, expenses)

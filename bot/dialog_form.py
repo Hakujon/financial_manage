@@ -5,9 +5,9 @@ from aiogram_dialog.widgets.text import Const, Format
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import CallbackQuery
 
-from bot.dao import (get_categories,
-                     create_filter,
-                     get_exp_by_filters)
+from bot.service import (get_categories,
+                         create_filter,
+                         get_exp_by_filters)
 
 
 class FSMFillForm(StatesGroup):
