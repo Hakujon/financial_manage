@@ -8,12 +8,14 @@ from aiogram.types import CallbackQuery
 from bot.service import (get_categories,
                          create_filter,
                          get_exp_by_filters)
+from bot.utils import show_expenses
 
 
 class FSMFillForm(StatesGroup):
     main_state = State()
     calendar_state = State()
     category_state = State()
+    normal_state = State()
 
 
 async def clicked_time_button(callback: CallbackQuery,
@@ -85,7 +87,7 @@ calendar_window = Window(
 async def clicked_category_button(callback: CallbackQuery,
                                   widget,
                                   dialog_manager: DialogManager,
-                                  item_id: str
+                                  item_id: str,
                                   ):
     dialog_manager.dialog_data["category"] = item_id
     category = dialog_manager.dialog_data["category"]
@@ -93,12 +95,18 @@ async def clicked_category_button(callback: CallbackQuery,
     filter = create_filter(start_date=start_date,
                            category=category)
     expenses = await get_exp_by_filters(filter)
-    if not isinstance(expenses, list):
-        text = expenses
-    else:
-        text = "\n".join(expense for expense in expenses)
+    # if not isinstance(expenses, list):
+    #     text = expenses
+    # else:
+    #     text = "\n".join(expense for expense in expenses)
+    # await dialog_manager.done()
+    # await callback.message.answer(text)
+    fsm_state = dialog_manager.middleware_data["state"]
+    await fsm_state.update_data(expenses=expenses)
+    await fsm_state.set_state(FSMFillForm.normal_state)
     await dialog_manager.done()
-    await callback.message.answer(text)
+    await show_expenses(event=callback,
+                        expenses=expenses)
 
 
 async def get_categories_data(dialog_manager: DialogManager, **kwargs) -> dict:

@@ -13,6 +13,7 @@ from aiogram_dialog import setup_dialogs
 from bot.router import router
 from bot.dialog_router import router as dialog_router
 from bot.config import settings
+from bot.reply_keyboard import head_keyboard
 
 BOT_TOKEN: str = settings.BOT_TOKEN  # type: ignore
 
@@ -30,11 +31,12 @@ async def sending_ping(message: Message) -> None:
     async with httpx.AsyncClient() as client:
         answer = await client.get("http://localhost:8000/ping")
         data = answer.json().get("message", "No response")
-    await message.answer(f"Your API is talking {data}")
+    await message.answer(text=f"Your API is talking {data}",
+                         reply_markup=head_keyboard)
 
 
-dp.include_router(router=router)
 dp.include_router(router=dialog_router)
+dp.include_router(router=router)
 setup_dialogs(dp)
 
 

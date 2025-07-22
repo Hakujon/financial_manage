@@ -9,3 +9,9 @@ class ExpenseFilter(BaseModel):
     category: Optional[str] = None
     min_amount: Optional[float] = None
     max_amount: Optional[float] = None
+
+
+class ExpenseWriter(BaseModel):
+    amount: float
+    category: str
+    description: Optional[str] = None

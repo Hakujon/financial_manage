@@ -32,7 +32,7 @@ def build_pagination_keyboard(page: int,
             text="Назад",
             callback_data=f"expenses_page:{page-1}"
         )
-    if (page*page_size) > len(expenses):
+    if ((1+page)*page_size) < len(expenses):
         builder.button(
             text="Вперед",
             callback_data=f"expenses_page:{page+1}"

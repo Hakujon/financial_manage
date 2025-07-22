@@ -3,7 +3,7 @@ from aiogram.types import Message, CallbackQuery
 from bot.inline_keyboards import build_pagination_keyboard
 
 
-PAGE_SIZE = 10
+PAGE_SIZE = 6
 
 
 def get_expenses_page(
@@ -15,12 +15,12 @@ def get_expenses_page(
     expenses = expenses[start_exp: end_exp]
     if not expenses:
         return "You have no expenses"
-    return "/n".join(expenses)
+    return "\n".join(expenses)
 
 
 async def show_expenses(event: Union[Message, CallbackQuery],
-                        page: int | None,
-                        expenses: list):
+                        expenses: list[str],
+                        page: int | None = None):
     if not page:
         page = 0
     text = get_expenses_page(expenses, page)
