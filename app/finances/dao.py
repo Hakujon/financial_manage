@@ -1,6 +1,7 @@
 from app.dao.base import BaseDAO
 from app.finances.models import Expense
 from app.finances.schemas import FilterExpense
+from app.finances.caching import CacheClient
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, distinct
 
@@ -25,14 +26,26 @@ class ExpenseDAO(BaseDAO):
             ]
 
     @classmethod
-    async def find_by_filter(cls, db_session: AsyncSession,
-                             filters: FilterExpense):
+    async def find_id_by_filter(cls, db_session: AsyncSession,
+                                filters: FilterExpense):
         conditions = cls.build_conditions(
             filters.model_dump(exclude_none=True)
         )
-        query = select(cls.model).where(and_(*conditions)) if conditions else select(cls.model)
+        query = (select(cls.model.id).where(and_(*conditions))
+                 if conditions else select(cls.model.id))
         result = await db_session.execute(query)
         return result.scalars().all()
+
+    @classmethod
+    async def find_by_id(cls, db_session: AsyncSession,
+                         ids: list[int]):
+        if not ids:
+            return []
+        query = select(cls.model).where(cls.model.id.in_(ids))
+        result = await db_session.execute(query)
+        return result.scalars().all()
+
+
 
     @classmethod
     async def find_categories(cls, db_session: AsyncSession):

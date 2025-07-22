@@ -3,23 +3,38 @@ from typing import Annotated
 from app.finances.schemas import ResponseExpense, CreateExpense, FilterExpense
 from app.finances.dao import ExpenseDAO
 from app.database import DB_SESSION
+from app.finances.caching import get_cache, CacheClient
+from app.finances.service import find_expenses_by_filter_with_cache
 
 
 router = APIRouter(prefix="/finance", tags=["Work with Expenses"])
 
 
-@router.get("/")
+# @router.get("/")
+# async def get_expenses_by_filter(
+#     request_body: Annotated[FilterExpense, Depends()],
+#     db_session: DB_SESSION,
+# ) -> list[ResponseExpense] | dict:
+#     expenses = await ExpenseDAO.find_by_filter(
+#         db_session, request_body)
+#     if not expenses:
+#         return {"message":
+#                 "Expenses not found"}
+#     return [ResponseExpense.model_validate(expense) for expense in expenses]
+
+@router.get("/", response_model=list[ResponseExpense])
 async def get_expenses_by_filter(
     request_body: Annotated[FilterExpense, Depends()],
     db_session: DB_SESSION,
-) -> list[ResponseExpense] | dict:
-    expenses = await ExpenseDAO.find_by_filter(
-        db_session, request_body)
+    cache: Depends(get_cache)
+):
+    expenses = await find_expenses_by_filter_with_cache(db_session,
+                                                        request_body,
+                                                        cache)
     if not expenses:
         return {"message":
                 "Expenses not found"}
-    return [ResponseExpense.model_validate(expense) for expense in expenses]
-
+    return expenses
 
 @router.get("/all")
 async def get_all_expenses(
