@@ -20,8 +20,6 @@ from bot.filters import ExpenseFormatFilter
 router = Router()
 
 
-
-
 @router.message(Command("expenses"))
 async def show_keyboard(message: Message):
     await message.answer(
@@ -33,28 +31,12 @@ async def show_keyboard(message: Message):
 @router.message(F.text == "Расходы эта неделя")
 async def show_week_notes(message: Message):
     expenses = await get_this_week_exp()
-    # if isinstance(expenses, str):
-    #     await message.answer(text=expenses)
-    #     return True
-    # await message.answer(
-    #     text="Вот твои записи за эту неделю")
-    # text = "\n\n".join(expenses)
-    # await message.answer(text=text)
     await show_expenses(message, expenses)
 
 
 @router.message(F.text == "Расходы этот месяц")
 async def show_month_notes(message: Message):
     expenses_this_month = await get_this_month_exp()
-    # if not expenses_this_month:
-    #     await message.answer(text="Not found")
-    #     return True
-    # await message.answer(
-    #     text="Вот твои записи за месяц:"
-    # )
-    # text = "\n\n".join(
-    #     expense for expense in expenses_this_month)
-    # await message.answer(text=text)
     await show_expenses(message, expenses_this_month)
 
 
@@ -72,13 +54,6 @@ async def show_categories(message: Message):
 async def show_category_notes(callback: CallbackQuery):
     category = callback.data.split(":", 1)[1]
     expenses = await get_category_exp(category)
-    # if not isinstance(expenses, list):
-    #     text = expenses
-    # else:
-    #     text = "\n\n".join(
-    #         expense for expense in expenses
-    #     )
-    # await callback.message.answer(text)
     await show_expenses(callback, expenses)
 
 
@@ -96,7 +71,7 @@ async def get_new_page(callback: CallbackQuery,
 async def create_note(message: Message):
     msg = message.text
     try:
-        await create_expense(msg) # type: ignore
+        await create_expense(msg)  # type: ignore
         await message.answer("Расход добавлен")
     except Exception as e:
         await message.answer(f"Произошла ошибочка: {e}")

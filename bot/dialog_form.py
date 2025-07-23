@@ -26,6 +26,14 @@ async def clicked_time_button(callback: CallbackQuery,
     await dialog_manager.switch_to(FSMFillForm.category_state)
 
 
+async def clicked_all_time_button(callback: CallbackQuery,
+                                  button: Button,
+                                  dialog_manager: DialogManager):
+    dialog_manager.dialog_data.pop("start_date", None)
+    await callback.answer()
+    await dialog_manager.switch_to(FSMFillForm.category_state)
+
+
 async def clicked_calendar_button(callback: CallbackQuery,
                                   button: Button,
                                   dialog_manager: DialogManager):
@@ -38,7 +46,7 @@ main_window = Window(
     Row(Button(
         text=Const("За всё время"),
         id="all_time",
-        on_click=clicked_time_button
+        on_click=clicked_all_time_button
     )),
     Row(
         Button(
@@ -91,7 +99,7 @@ async def clicked_category_button(callback: CallbackQuery,
                                   ):
     dialog_manager.dialog_data["category"] = item_id
     category = dialog_manager.dialog_data["category"]
-    start_date = dialog_manager.dialog_data["start_date"]
+    start_date = dialog_manager.dialog_data.get("start_date")
     filter = create_filter(start_date=start_date,
                            category=category)
     expenses = await get_exp_by_filters(filter)

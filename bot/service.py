@@ -63,6 +63,7 @@ async def get_categories():
         )
         response = response.json()
         if isinstance(response, list):
+            response.append("All")
             return response
         else:
             raise Exception
