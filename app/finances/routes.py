@@ -22,12 +22,12 @@ router = APIRouter(prefix="/finance", tags=["Work with Expenses"])
 #                 "Expenses not found"}
 #     return [ResponseExpense.model_validate(expense) for expense in expenses]
 
-@router.get("/", response_model=list[ResponseExpense])
+@router.get("/")
 async def get_expenses_by_filter(
     request_body: Annotated[FilterExpense, Depends()],
-    db_session: DB_SESSION,
-    cache: Depends(get_cache)
+    db_session: DB_SESSION
 ):
+    cache = await get_cache()
     expenses = await find_expenses_by_filter_with_cache(db_session,
                                                         request_body,
                                                         cache)

@@ -1,7 +1,6 @@
 from app.dao.base import BaseDAO
 from app.finances.models import Expense
 from app.finances.schemas import FilterExpense
-from app.finances.caching import CacheClient
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, distinct
 
@@ -20,9 +19,13 @@ class ExpenseDAO(BaseDAO):
             "start_date": lambda x: Expense.created_at >= x,
             "end_date": lambda x: Expense.created_at <= x
                 }
+
         return [
             filter_map[key](value) for key, value in filters_dict.items()
-            if key in filter_map
+            if (
+                (key in filter_map) and
+                not (key == "category" and value == "All")
+                )
             ]
 
     @classmethod
@@ -44,7 +47,6 @@ class ExpenseDAO(BaseDAO):
         query = select(cls.model).where(cls.model.id.in_(ids))
         result = await db_session.execute(query)
         return result.scalars().all()
-
 
 
     @classmethod
