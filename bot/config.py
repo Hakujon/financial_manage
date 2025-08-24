@@ -7,7 +7,7 @@ class Settings(BaseSettings):
     BOT_TOKEN: Optional[str] = None
 
     model_config: ClassVar[SettingsConfigDict] = SettingsConfigDict(
-        env_file=Path(__file__).parent.parent / ".env",
+        env_file=Path(__file__).parent / ".env",
         extra="ignore"
     )
 

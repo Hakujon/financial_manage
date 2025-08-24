@@ -4,7 +4,7 @@ from dateutil.relativedelta import relativedelta
 from bot.schemas import ExpenseFilter, ExpenseWriter
 from bot.filters import is_number
 
-url_api = "http://localhost:8000/finance/"
+url_api = "http://app:8000/finance/"
 
 now = datetime.now()
 one_week_ago = datetime.now() - timedelta(weeks=1)
@@ -24,6 +24,8 @@ def format_expense(expense: dict):
     created_at = datetime.fromisoformat(expense["created_at"]).strftime(
         "%d.%m.%Y"
         )
+    if expense["description"] is None:
+        return f"\n{created_at}\n {expense['amount']} - {expense['category']}"
     return (
         f"\n{created_at}\n {expense['amount']} - {expense['category']}"
         f"\n{expense['description']}"
@@ -124,11 +126,11 @@ async def create_expense(text: str) -> None:
     if is_number(parts[0]):
         amount = float(parts[0])
         category = parts[1]
-        description = "".join(parts[2:]) if len(parts) > 2 else ""
+        description = "".join(parts[2:]) if len(parts) > 2 else None
     elif is_number(parts[1]):
         amount = float(parts[1])
         category = parts[0]
-        description = "".join(parts[2:]) if len(parts) > 2 else ""
+        description = "".join(parts[2:]) if len(parts) > 2 else None
 
     expense = ExpenseWriter(
         amount=amount,

@@ -13,7 +13,7 @@ from app.finances.models import Expense
 
 from alembic import context
 
-BASE_DIR = Path(__file__).parent.parent
+BASE_DIR = Path(__file__).parent
 sys.path.insert(0, str(BASE_DIR))
 
 

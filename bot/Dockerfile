@@ -1,5 +1,3 @@
-# syntax=docker/dockerfile:1
-
 FROM python:3.11.6-slim
 
 RUN apt-get update && apt-get install -y \
@@ -13,16 +11,10 @@ RUN sh /uv-installer.sh && rm /uv-installer.sh
 ENV PATH="/root/.local/bin:$PATH"
 
 WORKDIR /project
-
-COPY pyproject.toml .env uv.lock alembic.ini ./
+COPY ../pyproject.toml ../uv.lock ./
 
 RUN uv pip install -r pyproject.toml --system
 
-COPY /app ./app
-COPY /start.sh ./start.sh
+COPY /bot ./bot
 
-RUN chmod +x ./start.sh
-
-EXPOSE 8000
-
-CMD ["./start.sh"]
+CMD ["python", "-m", "bot.main"]

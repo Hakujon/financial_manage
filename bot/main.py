@@ -17,7 +17,7 @@ from bot.reply_keyboard import head_keyboard
 
 BOT_TOKEN: str = settings.BOT_TOKEN  # type: ignore
 
-redis = Redis(host="localhost", port=6379)
+redis = Redis(host="redis_bot", port=6379)
 
 storage = RedisStorage(redis=redis,
                        key_builder=DefaultKeyBuilder(with_destiny=True))
@@ -29,7 +29,7 @@ bot = Bot(token=BOT_TOKEN)
 @dp.message(F.text.startswith("hello"))
 async def sending_ping(message: Message) -> None:
     async with httpx.AsyncClient() as client:
-        answer = await client.get("http://localhost:8000/ping")
+        answer = await client.get("http://app:8000/ping")
         data = answer.json().get("message", "No response")
     await message.answer(text=f"Your API is talking {data}",
                          reply_markup=head_keyboard)

@@ -28,7 +28,9 @@ services:
    - app_network
 
  app:
-  build: ./
+  build:
+   context: .
+   dockerfile: app/Dockerfile
   env_file:
    - .env
   ports:
@@ -40,6 +42,26 @@ services:
   depends_on:
    postgres:
     condition: service_healthy
+   redis_app:
+    condition: service_healthy
+  networks:
+   - app_network
+
+ bot:
+  build:
+   context: .
+   dockerfile: bot/Dockerfile
+  env_file:
+   - ./bot/.env
+  restart:
+   unless-stopped
+  volumes:
+   - ./bot:/project/bot
+  depends_on:
+   redis_bot:
+    condition: service_started
+   app:
+    condition: service_started
   networks:
    - app_network
 
@@ -52,7 +74,7 @@ services:
    - ./redis_bot_data:/data
   command: ["redis-server", "--appendonly", "yes"]
   networks:
-   - bot_network
+   - app_network
 
  redis_app:
   image: redis:7
@@ -62,11 +84,14 @@ services:
   volumes:
    - ./redis_app_data:/data
   command: ["redis-server", "--appendonly", "yes"]
+  healthcheck:
+   test: ["CMD", "redis-cli", "ping"]
+   interval: 5s
+   timeout: 3s
+   retries: 5
   networks:
    - app_network
 
 networks:
  app_network:
   name: app_network
- bot_network:
-  name: bot_network
