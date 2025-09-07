@@ -1,44 +1,51 @@
 import json
 from redis.asyncio import Redis
-from app.finances.schemas import ResponseExpense
+from app.finances.models import Expense
+from app.exceptions.exceptions import CacheExcpeption
 
 
 class CacheClient:
-    def __init__(self, redis: Redis, ttl_seconds: int = 300):
+    def __init__(self, redis: Redis, ttl_seconds: int | None = None):
         self.redis = redis
-        self.ttl = ttl_seconds
+        self.ttl = ttl_seconds if ttl_seconds else None
         self.prefix = "expense"
 
     def _make_key(self, id_: int) -> str:
         return f"{self.prefix}:{id_}"
 
-    async def get_many_exp(self, ids: list[int]) -> list[ResponseExpense]:
+    async def get_many_expenses(self, ids: list[int]) -> list[Expense]:
         keys = [self._make_key(id_) for id_ in ids]
-
-        raw_values = await self.redis.mget(keys=keys)
-
+        try:
+            raw_values = await self.redis.mget(keys=keys)
+        except Exception as e:
+            raise CacheExcpeption(f"Cache exception: {e}") from e
         results = []
         for raw in raw_values:
             if raw:
-                data = json.loads(raw)
-                results.append(ResponseExpense(**data))
+                expense_dict = json.loads(raw)
+                results.append(Expense.from_dict(expense_dict))
 
         return results
 
-    async def set_many(self, expenses: list[ResponseExpense]) -> None:
-        pipe = self.redis.pipeline()
-        for expense in expenses:
-            key = self._make_key(expense.id)
-            value = expense.model_dump_json()
-            pipe.set(key, value, ex=self.ttl)
+    async def set_many_expenses(self, expenses: list[Expense]) -> None:
+        try:
+            pipe = self.redis.pipeline()
+            for expense in expenses:
+                key = self._make_key(expense.id)
+                value = json.dumps(expense.to_dict())
+                pipe.set(key, value, ex=self.ttl)
 
-        await pipe.execute()
+            await pipe.execute()
+        except Exception as e:
+            raise CacheExcpeption(f"Cache exception: {e}") from e
 
     async def invalidate(self, ids: list[int]) -> None:
         keys = [self._make_key(id_) for id_ in ids]
-
-        if keys:
-            await self.redis.delete(*keys)
+        try:
+            if keys:
+                await self.redis.delete(*keys)
+        except Exception as e:
+            raise CacheExcpeption(f"Cache exception: {e}") from e
 
 
 redis = Redis(host="redis_app", port=6379,
