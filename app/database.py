@@ -6,7 +6,7 @@ from sqlalchemy import func
 from sqlalchemy.ext.asyncio import (create_async_engine, AsyncSession,
                                     async_sessionmaker, AsyncAttrs)
 from sqlalchemy.orm import (
-    DeclarativeBase, Mapped, declared_attr, mapped_column
+    DeclarativeBase, declared_attr, mapped_column
 )
 
 from app.config import settings
@@ -46,6 +46,3 @@ class Base(AsyncAttrs, DeclarativeBase):
     @declared_attr.directive
     def __tablename__(cls) -> str:
         return f"{cls.__name__.lower()}s"
-
-    created_at: Mapped[created_at]
-    updated_at: Mapped[updated_at]
