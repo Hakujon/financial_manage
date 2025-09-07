@@ -18,4 +18,4 @@ class Settings(BaseSettings):
                 f"{self.DB_HOST}/{self.DB_NAME}")
 
 
-settings = Settings() # type: ignore
+settings = Settings()  # type: ignore

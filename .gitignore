@@ -6,6 +6,9 @@ dist/
 wheels/
 *.egg-info
 
+# Dump files of old versions
+*_dump*
+
 # Virtual environments
 .venv
 
