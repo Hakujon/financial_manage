@@ -39,6 +39,8 @@ class BaseDAO(Generic[T]):
     ) -> T:
         new_instance = cls.model(**values)
         db_session.add(new_instance)
+        await db_session.flush()
+        await db_session.refresh(new_instance)
         return new_instance
 
     @classmethod

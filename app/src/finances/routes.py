@@ -4,24 +4,24 @@ from fastapi import (
     )
 from typing import Annotated
 
-from app.finances.service import (
+from src.finances.service import (
     CategoryService,
     PlanService,
     ExpenseService
 )
-from app.finances.schemas import (
+from src.finances.schemas import (
     ResponseExpense, CreateExpense, FilterExpense,
     BaseCategory, CreatePlan, ResponseCategory, ResponsePlan
 )
-from app.database import DB_SESSION
-from app.finances.caching import get_cache, CacheClient
-from app.exceptions.exceptions import (
+from src.database import DB_SESSION
+from src.finances.caching import CACHE
+from src.exceptions.exceptions import (
     DatabaseException, CacheExcpeption,
     ServiceException, NotFoundException
 )
 
 
-router = APIRouter(prefix="/finance", tags=[
+router = APIRouter(prefix="/finances", tags=[
     "Work with Expenses, Categories and Plans"])
 
 
@@ -29,7 +29,7 @@ router = APIRouter(prefix="/finance", tags=[
 async def get_expenses_by_filter_with_cache(
     request_body: Annotated[FilterExpense, Depends()],
     db_session: DB_SESSION,
-    cache: CacheClient = Depends(get_cache)
+    cache: CACHE
 ) -> list[ResponseExpense] | dict:
     try:
         expenses = await ExpenseService.get_expenses_with_cache(
@@ -51,11 +51,36 @@ async def get_expenses_by_filter_with_cache(
         )
 
 
+@router.get("/plans/remains")
+async def get_remaining_of_this_plan(
+    db_session: DB_SESSION,
+    category: BaseCategory,
+    cache: CACHE
+) -> float:
+    try:
+        remaining_amount = await PlanService.calculate_remaining_of_plan(
+            db_session=db_session,
+            category=category,
+            cache=cache
+        )
+        return remaining_amount
+    except NotFoundException as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+    except DatabaseException as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
+
+
 @router.post("/expenses")
 async def create_expense(
     expense: CreateExpense,
     db_session: DB_SESSION
-) -> ResponseExpense:
+):
     try:
         new_expense = await ExpenseService.create_expense(
             db_session=db_session,
@@ -63,6 +88,7 @@ async def create_expense(
         )
 
         return ResponseExpense.model_validate(new_expense)
+        # return new_expense
     except DatabaseException as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

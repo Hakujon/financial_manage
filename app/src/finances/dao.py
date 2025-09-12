@@ -5,11 +5,11 @@ from dateutil.relativedelta import relativedelta
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_
 
-from app.finances.schemas import (
+from src.finances.schemas import (
     BaseCategory, FilterExpense
 )
-from app.dao.base import BaseDAO
-from app.finances.models import (
+from src.dao.base import BaseDAO
+from src.finances.models import (
     Expense, Category, Plan
 )
 
@@ -25,7 +25,7 @@ class CategoryDao(BaseDAO[Category]):
     ) -> Category:
         db_category = await cls.find_one_or_none(
             db_session=db_session,
-            name=category.name
+            category_name=category.category_name
         )
         if db_category is None:
             db_category = await cls.add(
@@ -45,6 +45,8 @@ class PlanDao(BaseDAO[Plan]):
         today = datetime.now()
         if today.day < first_day_of_plan:
             start_date = today - relativedelta(months=1)
+        else:
+            start_date = today
         start_date.replace(day=first_day_of_plan)
         return start_date
 
@@ -84,7 +86,7 @@ class PlanDao(BaseDAO[Plan]):
         today = datetime.now()
         db_category = await CategoryDao.find_one_or_none(
             db_session=db_session,
-            name=category.name
+            category_name=category.category_name
         )
         if db_category is None:
             return None
@@ -130,7 +132,8 @@ class ExpenseDao(BaseDAO[Expense]):
             "start_date": lambda x: Expense.created_at >= x,
             "end_date": lambda x: Expense.created_at <= x
         }
-        filter_dict = expense_filter.model_dump()
+        filter_dict = expense_filter.model_dump(exclude_unset=True,
+                                                exclude_none=True)
         filter_list = [
             filter_map[key](value) for key, value in filter_dict.items()
             if (

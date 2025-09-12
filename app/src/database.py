@@ -9,7 +9,7 @@ from sqlalchemy.orm import (
     DeclarativeBase, declared_attr, mapped_column
 )
 
-from app.config import settings
+from src.config import settings
 
 DATABASE_URL = settings.get_db_url()
 

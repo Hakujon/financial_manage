@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from app.finances.routes import router as expense_router
+from src.finances.routes import router as finanses_router
 
 
 app = FastAPI()
@@ -10,4 +10,4 @@ async def ping_pong():
     return {"message": "pong"}
 
 
-app.include_router(expense_router)
+app.include_router(finanses_router)

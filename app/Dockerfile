@@ -12,16 +12,13 @@ RUN sh /uv-installer.sh && rm /uv-installer.sh
 
 ENV PATH="/root/.local/bin:$PATH"
 
-WORKDIR /project
-COPY ./pyproject.toml ./uv.lock ./
+WORKDIR /app
+COPY ./pyproject.toml ./uv.lock ./start.sh ./
+RUN chmod +x ./start.sh
 
 RUN uv pip install -r pyproject.toml --system
 
-COPY /app ./app
-
-
-RUN mv ./app/start.sh ./start.sh
-RUN chmod +x ./start.sh
+COPY /src ./src
 
 EXPOSE 8000
 

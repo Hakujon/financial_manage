@@ -5,14 +5,15 @@ from pydantic import BaseModel, ConfigDict, Field
 
 class BaseCategory(BaseModel):
     model_config = ConfigDict(from_attributes=True)
-    name: str = Field(
+    category_name: str = Field(
         ..., min_length=3, max_length=15,
         description="Название категории"
     )
 
 
 class BaseExpense(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True,
+                              )
     amount: float = Field(
         ..., ge=1, description="Сумма"
     )
@@ -32,7 +33,7 @@ class CreateCategory(BaseCategory):
 class CreateExpense(BaseExpense):
     description: Optional[str] = Field(
         None,
-        min_length=5,
+        min_length=0,
         max_length=80,
         description="Краткое описание"
     )
@@ -53,7 +54,7 @@ class ResponseExpense(BaseExpense):
     id: int
     description: Optional[str] = Field(
         None,
-        min_length=5,
+        min_length=0,
         max_length=80,
         description="Краткое описание"
     )

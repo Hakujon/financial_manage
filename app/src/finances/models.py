@@ -2,7 +2,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import ForeignKey
 from sqlalchemy.inspection import inspect
 from datetime import datetime
-from app.database import (
+from src.database import (
     Base, int_pk, str_not_null,
     str_null, created_at, updated_at)
 

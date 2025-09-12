@@ -1,7 +1,9 @@
 import json
+from typing import Annotated
 from redis.asyncio import Redis
-from app.finances.models import Expense
-from app.exceptions.exceptions import CacheExcpeption
+from fastapi import Depends
+from src.finances.models import Expense
+from src.exceptions.exceptions import CacheExcpeption
 
 
 class CacheClient:
@@ -59,3 +61,5 @@ async def get_cache() -> CacheClient:
         cache_client = CacheClient(redis=redis)
 
     return cache_client
+
+CACHE = Annotated[CacheClient, Depends(get_cache)]
