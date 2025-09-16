@@ -14,7 +14,7 @@ from src.finances.models import (
 )
 from src.finances.schemas import (
     BaseCategory, CreateExpense, FilterExpense,
-    CreatePlan
+    CreatePlan, ResponseExpense
 )
 from src.finances.caching import CacheClient
 
@@ -278,28 +278,36 @@ class ExpenseService():
         db_session: AsyncSession,
         expense_filter: FilterExpense,
         cache: CacheClient
-    ) -> Optional[List[Expense]]:
+    ) -> Optional[List[ResponseExpense]]:
         try:
-            expenses_ids = await ExpenseDao.find_id_expense_by_filter(
-                db_session=db_session,
-                expense_filter=expense_filter
-            )
-            if not expenses_ids:
-                return []
-            cached_expenses = await cache.get_many_expenses(
-                ids=expenses_ids
-            )
-            cached_ids = {expense.id for expense in cached_expenses}
-            not_cached_ids = list(set(expenses_ids)-cached_ids)
-            if not_cached_ids:
-                expenses_from_db = await ExpenseDao.find_expenses_by_id(
+            async with db_session.begin():
+                expenses_ids = await ExpenseDao.find_id_expense_by_filter(
                     db_session=db_session,
-                    ids=not_cached_ids
+                    expense_filter=expense_filter
                 )
-                await cache.set_many_expenses(expenses=expenses_from_db)
-            expenses = cached_expenses + expenses_from_db
-            ordered_expenses = sorted(expenses, key=lambda x: x.category_id)
-            return ordered_expenses
+                if not expenses_ids:
+                    return []
+            async with db_session.begin():
+                cached_expenses = await cache.get_many_expenses(
+                    ids=expenses_ids
+                )
+                cached_ids = {expense.id for expense in cached_expenses}
+                not_cached_ids = list(set(expenses_ids)-cached_ids)
+                expenses_for_cache = []
+                if not_cached_ids:
+                    expenses_from_db = await ExpenseDao.find_expenses_by_id(
+                        db_session=db_session,
+                        ids=not_cached_ids
+                    )
+                    expenses_for_cache = [ResponseExpense.model_validate(
+                        expense_from_db
+                        ) for expense_from_db in expenses_from_db]
+                    await cache.set_many_expenses(expenses=expenses_for_cache)
+                expenses = cached_expenses + expenses_for_cache
+                ordered_expenses = sorted(
+                    expenses, key=lambda x: x.created_at, reverse=True
+                    )
+                return ordered_expenses
         except SQLAlchemyError as e:
             await db_session.rollback()
             raise DatabaseException(f"Database exc: {e}") from e
@@ -325,7 +333,7 @@ class ExpenseService():
 
     @staticmethod
     def calculate_sum_of_expenses(
-        expenses: Optional[List[Expense]]
+        expenses: Optional[List[ResponseExpense]]
     ) -> float:
         if not expenses:
             return 0

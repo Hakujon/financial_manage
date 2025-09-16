@@ -2,7 +2,7 @@ import json
 from typing import Annotated
 from redis.asyncio import Redis
 from fastapi import Depends
-from src.finances.models import Expense
+from src.finances.schemas import ResponseExpense
 from src.exceptions.exceptions import CacheExcpeption
 
 
@@ -15,7 +15,7 @@ class CacheClient:
     def _make_key(self, id_: int) -> str:
         return f"{self.prefix}:{id_}"
 
-    async def get_many_expenses(self, ids: list[int]) -> list[Expense]:
+    async def get_many_expenses(self, ids: list[int]) -> list[ResponseExpense]:
         keys = [self._make_key(id_) for id_ in ids]
         try:
             raw_values = await self.redis.mget(keys=keys)
@@ -25,16 +25,17 @@ class CacheClient:
         for raw in raw_values:
             if raw:
                 expense_dict = json.loads(raw)
-                results.append(Expense.from_dict(expense_dict))
+                print(type(expense_dict))
+                results.append(ResponseExpense(**expense_dict))
 
         return results
 
-    async def set_many_expenses(self, expenses: list[Expense]) -> None:
+    async def set_many_expenses(self, expenses: list[ResponseExpense]) -> None:
         try:
             pipe = self.redis.pipeline()
             for expense in expenses:
                 key = self._make_key(expense.id)
-                value = json.dumps(expense.to_dict())
+                value = expense.model_dump_json()
                 pipe.set(key, value, ex=self.ttl)
 
             await pipe.execute()
@@ -50,7 +51,7 @@ class CacheClient:
             raise CacheExcpeption(f"Cache exception: {e}") from e
 
 
-redis = Redis(host="redis_app", port=6379,
+redis = Redis(host="localhost", port=6380,
               decode_responses=True)
 cache_client: CacheClient | None = None
 
