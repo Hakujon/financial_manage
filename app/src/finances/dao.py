@@ -1,10 +1,10 @@
 from typing import Optional, Callable, Any
-from datetime import datetime
+from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_
-
+from sqlalchemy.orm import joinedload
 from src.finances.schemas import (
     BaseCategory, FilterExpense
 )
@@ -128,9 +128,10 @@ class ExpenseDao(BaseDAO[Expense]):
         filter_map: dict[str, Callable[[Any], Any]] = {
             "start_amount": lambda x: Expense.amount >= x,
             "head_amount": lambda x: Expense.amount < x,
-            "category": lambda x: Expense.category == x,
+            "category": lambda x: Category.category_name.ilike(x),
             "start_date": lambda x: Expense.created_at >= x,
-            "end_date": lambda x: Expense.created_at <= x
+            "end_date": lambda x: Expense.created_at < (
+                x + timedelta(days=1))
         }
         filter_dict = expense_filter.model_dump(exclude_unset=True,
                                                 exclude_none=True)
@@ -150,7 +151,10 @@ class ExpenseDao(BaseDAO[Expense]):
         expense_filter: FilterExpense
     ) -> list[int]:
         conditions = cls.build_conditions(expense_filter)
-        query = select(cls.model.id).where(and_(*conditions))
+        query = select(cls.model.id)
+        if expense_filter.category and expense_filter.category != "All":
+            query = query.join(Expense.category)
+        query = query.where(and_(*conditions))
         result = await db_session.execute(query)
         expense_ids = result.scalars().all()
         return list(expense_ids)
@@ -163,7 +167,9 @@ class ExpenseDao(BaseDAO[Expense]):
     ) -> list[Expense]:
         if not ids:
             return []
-        query = select(cls.model).where(cls.model.id.in_(ids))
+        query = select(cls.model).where(
+            cls.model.id.in_(ids)
+            ).options(joinedload(Expense.category))
         result = await db_session.execute(query)
         expenses = list(result.scalars().all())
         return expenses
