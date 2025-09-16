@@ -1,6 +1,5 @@
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import ForeignKey
-from sqlalchemy.inspection import inspect
 from datetime import datetime
 from src.database import (
     Base, int_pk, str_not_null,
@@ -29,21 +28,6 @@ class Expense(Base):
 
     def __repr__(self):
         return str(self)
-
-    def to_dict(
-        self
-    ) -> dict:
-        return {
-            c.key: getattr(self, c.key)
-            for c in inspect(self).mapper.column_attrs
-        }
-
-    @classmethod
-    def from_dict(
-        cls,
-        data: dict
-    ):
-        return cls(**data)
 
 
 class Plan(Base):
