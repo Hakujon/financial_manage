@@ -4,7 +4,7 @@ from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 
 from src.exceptions.exceptions import (
     DatabaseException, CacheExcpeption,
-    NotFoundException
+    NotFoundException, ServiceException
     )
 from src.finances.dao import (
     ExpenseDao, PlanDao, CategoryDao
@@ -89,6 +89,12 @@ class PlanService():
     ) -> Plan:
         try:
             async with db_session.begin():
+                db_plan = await PlanDao.find_one_or_none_plan(
+                    db_session=db_session,
+                    category=plan.category
+                )
+                if db_plan:
+                    raise ServiceException("Plan already created")
                 new_plan = await PlanDao.add_plan(
                     db_session=db_session,
                     category=plan.category,
@@ -163,6 +169,8 @@ class PlanService():
                 data_id=plan_id,
                 **plan.model_dump()
             )
+            if not updated_plan:
+                raise NotFoundException("Plan not found")
             return updated_plan
         except SQLAlchemyError as e:
             await db_session.rollback()
@@ -174,33 +182,39 @@ class PlanService():
         db_session: AsyncSession,
         category: BaseCategory,
         cache: CacheClient
-    ) -> float:
+    ) -> dict:
         try:
-            async with db_session.begin():
-                plan = await cls.get_plan(
-                    db_session=db_session,
-                    category=category)
-
-                end_date = plan.end_date
-                start_date = plan.start_date
-                expense_filter = FilterExpense(
-                    start_amount=None,
-                    head_amount=None,
-                    category=category.category_name,
-                    start_date=start_date,
-                    end_date=end_date
-                )
-                expenses = await ExpenseService.get_expenses_with_cache(
+            plan = await cls.get_plan(
+                db_session=db_session,
+                category=category)
+            print(plan)
+            end_date = plan.end_date
+            start_date = plan.start_date
+            expense_filter = FilterExpense(
+                start_amount=None,
+                head_amount=None,
+                category=category.category_name,
+                start_date=start_date,
+                end_date=end_date
+            )
+            expenses = await ExpenseService.get_expenses_with_cache(
                     db_session=db_session,
                     expense_filter=expense_filter,
                     cache=cache
                 )
 
-                expenses_amount = ExpenseService.calculate_sum_of_expenses(
-                    expenses)
+            expenses_amount = ExpenseService.calculate_sum_of_expenses(
+                expenses)
 
-                remaining = plan.planned_amount - expenses_amount
-                return remaining
+            remaining = plan.planned_amount - expenses_amount
+
+            return {
+                "start_date": plan.start_date.isoformat(),
+                "end_date": plan.end_date.isoformat(),
+                "category": category.category_name,
+                "planned_amount": plan.planned_amount,
+                "remaining": remaining
+            }
 
         except NotFoundException as e:
             await db_session.rollback()
@@ -232,7 +246,7 @@ class ExpenseService():
                             **expense.category.model_dump()
                         )
                     )
-                    db_category = await CategoryDao.find_one_or_none(
+                    db_category = await CategoryDao.find_one_or_none_by_name(
                         db_session=db_session,
                         category_name=expense.category.category_name
                     )
@@ -336,5 +350,5 @@ class ExpenseService():
         expenses: Optional[List[ResponseExpense]]
     ) -> float:
         if not expenses:
-            return 0
+            return 7
         return sum(expense.amount for expense in expenses)

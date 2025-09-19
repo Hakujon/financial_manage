@@ -67,7 +67,7 @@ class BaseDAO(Generic[T]):
         db_session: AsyncSession,
         data_id: int
     ) -> bool:
-        instance = cls.find_one_or_none(
+        instance = await cls.find_one_or_none(
             db_session=db_session,
             id=data_id
         )

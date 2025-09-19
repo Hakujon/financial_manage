@@ -2,13 +2,14 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import ForeignKey
 from datetime import datetime
 from src.database import (
-    Base, int_pk, str_not_null,
-    str_null, created_at, updated_at)
+    Base, int_pk,
+    str_null, created_at, updated_at,
+    str_uniq)
 
 
 class Category(Base):
     id: Mapped[int_pk]
-    category_name: Mapped[str_not_null]
+    category_name: Mapped[str_uniq]
     created_at: Mapped[created_at]
 
 
@@ -38,7 +39,14 @@ class Plan(Base):
         ForeignKey("categorys.id"),
         nullable=False
     )
-    category: Mapped["Category"] = relationship()
+    category: Mapped["Category"] = relationship(lazy='joined')
     planned_amount: Mapped[float]
     created_at: Mapped[created_at]
     updated_at: Mapped[updated_at]
+
+    def __str__(self):
+        return (
+            f"{self.__class__.__name__} {self.id}"
+            f" {self.category} {self.start_date} "
+            f" {self.end_date}"
+            )

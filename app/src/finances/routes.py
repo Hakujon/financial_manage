@@ -11,7 +11,8 @@ from src.finances.service import (
 )
 from src.finances.schemas import (
     ResponseExpense, CreateExpense, FilterExpense,
-    BaseCategory, CreatePlan, ResponseCategory, ResponsePlan
+    BaseCategory, CreatePlan, ResponseCategory, ResponsePlan,
+    FilterCategory
 )
 from src.database import DB_SESSION
 from src.finances.caching import CACHE
@@ -54,16 +55,18 @@ async def get_expenses_by_filter_with_cache(
 @router.get("/plans/remains")
 async def get_remaining_of_this_plan(
     db_session: DB_SESSION,
-    category: BaseCategory,
+    request_body: Annotated[FilterCategory, Depends()],
     cache: CACHE
-) -> float:
+) -> dict:
     try:
-        remaining_amount = await PlanService.calculate_remaining_of_plan(
+        remaining = await PlanService.calculate_remaining_of_plan(
             db_session=db_session,
-            category=category,
+            category=BaseCategory(
+                category_name=request_body.category_name
+            ),
             cache=cache
         )
-        return remaining_amount
+        return remaining
     except NotFoundException as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -123,6 +126,11 @@ async def delete_expense(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(e)
         )
+    except NotFoundException as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
 
 
 @router.post("/plans")
@@ -145,23 +153,25 @@ async def create_new_plan(
 
 @router.get("/plans")
 async def find_plan(
-    category: BaseCategory,
+    request_body: Annotated[FilterCategory, Depends()],
     db_session: DB_SESSION
 ) -> ResponsePlan:
     try:
         plan_from_db = await PlanService.get_plan(
             db_session=db_session,
-            category=category
-        )
-        if not plan_from_db:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Plan not found"
+            category=BaseCategory(
+                category_name=request_body.category_name
             )
+        )
         return ResponsePlan.model_validate(plan_from_db)
     except DatabaseException as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
+    except NotFoundException as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
             detail=str(e)
         )
 
@@ -178,15 +188,15 @@ async def update_plan(
             plan_id=plan_id,
             plan=plan
         )
-        if updated_plan is None:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Plan not found"
-            )
         return ResponsePlan.model_validate(updated_plan)
     except DatabaseException as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
+    except NotFoundException as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
             detail=str(e)
         )
 

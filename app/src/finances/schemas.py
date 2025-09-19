@@ -104,3 +104,9 @@ class FilterExpense(BaseModel):
     end_date: Optional[datetime] = Field(
         None, description="Конечная дата"
     )
+
+
+class FilterCategory(BaseModel):
+    category_name: str = Field(
+        ..., description="Название категории"
+    )

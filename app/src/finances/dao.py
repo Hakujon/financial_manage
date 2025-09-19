@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_
+from sqlalchemy import select, and_, func
 from sqlalchemy.orm import joinedload
 from src.finances.schemas import (
     BaseCategory, FilterExpense
@@ -18,12 +18,26 @@ class CategoryDao(BaseDAO[Category]):
     model = Category
 
     @classmethod
+    async def find_one_or_none_by_name(
+        cls,
+        db_session: AsyncSession,
+        category_name: str
+    ) -> Optional[Category]:
+        normalized_name = category_name.strip().lower()
+        query = select(cls.model).where(
+            func.lower(cls.model.category_name) == normalized_name
+        )
+        result = await db_session.execute(query)
+        db_category = result.scalars().one_or_none()
+        return db_category
+
+    @classmethod
     async def find_or_create_category(
         cls,
         db_session: AsyncSession,
         category: BaseCategory,
     ) -> Category:
-        db_category = await cls.find_one_or_none(
+        db_category = await cls.find_one_or_none_by_name(
             db_session=db_session,
             category_name=category.category_name
         )
@@ -47,7 +61,11 @@ class PlanDao(BaseDAO[Plan]):
             start_date = today - relativedelta(months=1)
         else:
             start_date = today
-        start_date.replace(day=first_day_of_plan)
+        start_date = start_date.replace(
+            day=first_day_of_plan,
+            hour=0,
+            minute=0,
+            second=0)
         return start_date
 
     @classmethod
@@ -61,7 +79,11 @@ class PlanDao(BaseDAO[Plan]):
         if start_date is None:
             start_date = cls.calculate_start_date()
         end_date: datetime = start_date + relativedelta(months=1)
-        end_date = end_date - relativedelta(days=1)
+        end_date = (end_date - relativedelta(days=1)).replace(
+            hour=23,
+            minute=59,
+            second=59
+        )
         if planned_amount is None:
             planned_amount = 0
         db_category = await CategoryDao.find_or_create_category(
@@ -84,7 +106,7 @@ class PlanDao(BaseDAO[Plan]):
         category: BaseCategory
     ) -> Optional[Plan]:
         today = datetime.now()
-        db_category = await CategoryDao.find_one_or_none(
+        db_category = await CategoryDao.find_one_or_none_by_name(
             db_session=db_session,
             category_name=category.category_name
         )
@@ -93,7 +115,7 @@ class PlanDao(BaseDAO[Plan]):
         query = (
                 select(cls.model).
                 where(cls.model.start_date < today,
-                      cls.model.end_date > today,
+                      cls.model.end_date >= today,
                       cls.model.category_id == db_category.id)
                 )
         result = await db_session.execute(query)
@@ -111,11 +133,9 @@ class PlanDao(BaseDAO[Plan]):
             category=category
         )
         if db_plan is None:
-            start_date = cls.calculate_start_date()
             db_plan = await cls.add_plan(
                 db_session=db_session,
-                category=category,
-                start_date=start_date
+                category=category
             )
         return db_plan
 
