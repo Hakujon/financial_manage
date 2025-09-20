@@ -1,13 +1,14 @@
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.types import InlineKeyboardMarkup
+from src.schemas.schemas import BaseCategory
 
 
-def build_categories_keyboard(categories: list[str]):
+def build_categories_keyboard(categories: list[BaseCategory]):
     builder = InlineKeyboardBuilder()
     for category in categories:
         builder.button(
-            text=category,
-            callback_data=f"category:{category}")
+            text=category.category_name,
+            callback_data=f"category:{category.category_name}")
 
     return builder
 
@@ -23,9 +24,11 @@ def build_date_keyboard():
     return builder
 
 
-def build_pagination_keyboard(page: int,
-                              page_size: int,
-                              expenses: list) -> InlineKeyboardMarkup:
+def build_pagination_keyboard(
+        page: int,
+        page_size: int,
+        expenses: list
+            ) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     if page > 0:
         builder.button(
