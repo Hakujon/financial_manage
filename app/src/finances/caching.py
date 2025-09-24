@@ -51,7 +51,7 @@ class CacheClient:
             raise CacheExcpeption(f"Cache exception: {e}") from e
 
 
-redis = Redis(host="localhost", port=6380,
+redis = Redis(host="redis_app", port=6379,
               decode_responses=True)
 cache_client: CacheClient | None = None
 

@@ -350,5 +350,5 @@ class ExpenseService():
         expenses: Optional[List[ResponseExpense]]
     ) -> float:
         if not expenses:
-            return 7
+            return 0
         return sum(expense.amount for expense in expenses)
