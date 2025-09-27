@@ -73,3 +73,17 @@ class ResponsePlan(BasePlan):
         ...,
         description="Дата последнего обновления"
     )
+
+
+class ExpenseWriter(BaseModel):
+    amount: float
+    category: str
+    description: Optional[str] = None
+
+
+class ExpenseFilter(BaseModel):
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
+    category: Optional[str] = None
+    min_amount: Optional[float] = None
+    max_amount: Optional[float] = None
