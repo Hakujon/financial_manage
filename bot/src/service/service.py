@@ -1,6 +1,9 @@
 from httpx import AsyncClient
 from datetime import datetime, timedelta
-from src.schemas.schemas import ExpenseFilter, ExpenseWriter
+from src.schemas.schemas import (
+    ExpenseFilter, ExpenseWriter,
+    CreatePlan
+)
 from src.core.config import settings
 
 URL = settings.URL_API
@@ -40,6 +43,19 @@ def format_expense_to_response(expense: dict) -> str:
         f"\n{created_at}\n"
         f"{expense['amount']} - {expense['category']['category_name']}\n"
         f"{expense['description']}"
+    )
+
+
+def format_plan_to_response(plan: dict) -> str:
+    category = plan["category"]["category_name"]
+    start_date = plan["start_date"]
+    end_date = plan["end_date"]
+    planned_amount = plan["planned_amount"]
+    return (
+        f"Новый план\n Категория: {category}\n"
+        f"Начало промежутка: {start_date}\n"
+        f"Конец промежутка: {end_date}\n"
+        f"Планируемая сумма: {planned_amount}"
     )
 
 
@@ -131,13 +147,73 @@ async def get_exp_by_category(category: str) -> list[str] | str:
     return expenses
 
 
-async def create_expense(
-    text: str
-) -> None:
-    expense = format_expense_to_write(text=text)
+async def get_remaining_of_category(
+        category: str) -> dict:
     async with AsyncClient() as client:
         if URL:
-            await client.post(
-                url=URL,
-                json=expense.model_dump()
+            response = await client.get(
+                url=f"{URL}/plans/remains",
+                params={"category": category}
             )
+
+            plan = response.json()
+
+    return plan
+
+
+async def create_expense(
+    text: str
+) -> str:
+    expense = format_expense_to_write(text=text)
+    async with AsyncClient() as client:
+        try:
+            if URL:
+                response = await client.post(
+                    url=URL,
+                    json=expense.model_dump()
+                )
+                new_expense = response.json()
+        except Exception as e:
+            raise e
+    async with AsyncClient() as client:
+        if URL:
+            remaining_plan = await get_remaining_of_category(
+                category=expense.category
+            )
+
+    expense_str = format_expense_to_response(
+        expense=new_expense
+    )
+    expense_with_plan = (
+        f"{expense_str}\n"
+        f"Планировалось в категории {remaining_plan['planned_amount']}"
+        f"Осталось {remaining_plan['remaining']}"
+    )
+    return expense_with_plan
+
+
+async def create_plan(
+        plan: CreatePlan
+) -> str:
+    async with AsyncClient() as client:
+        if URL:
+            response = await client.post(
+                url=f"{URL}/plans",
+                json=plan.model_dump_json()
+            )
+            new_plan = response.json()
+    return format_plan_to_response(plan=new_plan)
+
+
+async def get_plan_of_category(category: str) -> str:
+    try:
+        async with AsyncClient() as client:
+            if URL:
+                response = await client.get(
+                    url=f"{URL}/plans",
+                    params={"category_name": category}
+                )
+                plan = response.json()
+        return format_plan_to_response(plan=plan)
+    except Exception as e:
+        raise e
