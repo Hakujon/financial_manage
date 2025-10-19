@@ -25,7 +25,6 @@ class CacheClient:
         for raw in raw_values:
             if raw:
                 expense_dict = json.loads(raw)
-                print(type(expense_dict))
                 results.append(ResponseExpense(**expense_dict))
 
         return results
@@ -59,7 +58,8 @@ cache_client: CacheClient | None = None
 async def get_cache() -> CacheClient:
     global redis, cache_client
     if cache_client is None:
-        cache_client = CacheClient(redis=redis)
+        cache_client = CacheClient(redis=redis,
+                                   ttl_seconds=3600)
 
     return cache_client
 
