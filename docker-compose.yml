@@ -29,16 +29,19 @@ services:
 
  app:
   build:
-   context: .
-   dockerfile: app/Dockerfile
+   context: ./app
+   dockerfile: ./Dockerfile
   env_file:
-   - .env
+   - app/.env
   ports:
    - 8000:8000
   restart:
    unless-stopped
   volumes:
-   - ./app:/project/app
+   - ./app:/app
+   - ./app/src:/app/src
+  environment:
+   - PYTHONPATH=/app/src
   depends_on:
    postgres:
     condition: service_healthy
@@ -47,34 +50,7 @@ services:
   networks:
    - app_network
 
- bot:
-  build:
-   context: .
-   dockerfile: bot/Dockerfile
-  env_file:
-   - ./bot/.env
-  restart:
-   unless-stopped
-  volumes:
-   - ./bot:/project/bot
-  depends_on:
-   redis_bot:
-    condition: service_started
-   app:
-    condition: service_started
-  networks:
-   - app_network
 
- redis_bot:
-  image: redis:7
-  container_name: redis_bot
-  ports:
-   - 6379:6379
-  volumes:
-   - ./redis_bot_data:/data
-  command: ["redis-server", "--appendonly", "yes"]
-  networks:
-   - app_network
 
  redis_app:
   image: redis:7
@@ -92,6 +68,47 @@ services:
   networks:
    - app_network
 
+
+ bot:
+  build:
+   context: ./bot
+   dockerfile: ./Dockerfile
+  env_file:
+   - bot/.env
+  ports:
+   - 3000:3000
+  restart:
+   unless-stopped
+  volumes:
+   - ./bot:/bot
+   - ./bot/src:/bot/src
+  environment:
+   - PYTHONPATH=/bot/src
+  depends_on:
+   redis_bot:
+    condition: service_healthy
+  networks:
+   - app_network
+   - bot_network
+
+ redis_bot:
+  image: redis:7
+  container_name: redis_bot
+  ports:
+   - 6379:6379
+  volumes:
+   - ./redis_bot_data:/data
+  command: ["redis-server", "--appendonly", "yes"]
+  healthcheck:
+    test: ["CMD", "redis-cli", "ping"]
+    interval: 5s
+    timeout: 3s
+    retries: 5
+  networks:
+   - bot_network
+
 networks:
  app_network:
   name: app_network
+ bot_network:
+  name: bot_network
