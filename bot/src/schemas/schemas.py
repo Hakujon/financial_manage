@@ -77,7 +77,7 @@ class ResponsePlan(BasePlan):
 
 class ExpenseWriter(BaseModel):
     amount: float
-    category: str
+    category: BaseCategory
     description: Optional[str] = None
 
 

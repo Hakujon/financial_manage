@@ -1,5 +1,5 @@
 from typing import Any
-from bot.src.schemas.schemas import CreatePlan, BaseCategory
+from src.schemas.schemas import CreatePlan, BaseCategory
 
 
 def is_float_number(text: str) -> bool:

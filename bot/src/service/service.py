@@ -2,7 +2,7 @@ from httpx import AsyncClient
 from datetime import datetime, timedelta
 from src.schemas.schemas import (
     ExpenseFilter, ExpenseWriter,
-    CreatePlan
+    CreatePlan, BaseCategory
 )
 from src.core.config import settings
 
@@ -37,7 +37,7 @@ def format_expense_to_response(expense: dict) -> str:
     if expense["description"] is None:
         return (
             f"\n{created_at}\n"
-            f"{expense['amount'] - {expense['category']['category_name']}}"
+            f"{expense['amount']} - {expense['category']['category_name']}"
         )
     return (
         f"\n{created_at}\n"
@@ -75,7 +75,7 @@ def format_expense_to_write(text: str) -> ExpenseWriter:
     description = "".join(parts[2:]) if len(parts) > 2 else None
     expense = ExpenseWriter(
         amount=amount,
-        category=category,
+        category=BaseCategory(category_name=category),
         description=description
     )
     return expense
@@ -104,8 +104,10 @@ async def get_categories():
         )
         response = response.json()
         if isinstance(response, list):
-            response.append("All")
-            return response
+            categorys = [BaseCategory.model_validate(category) for category in response]
+            category_names = [cat.category_name for cat in categorys]
+            category_names.append("All")
+            return category_names
         else:
             raise Exception
 
@@ -119,13 +121,26 @@ async def get_exp_by_filters(
     }
     async with AsyncClient() as client:
         if URL:
-            response = await client.get(url=URL,
+            response = await client.get(url=f"{URL}/expenses",
                                         params=params)
             result = response.json()
+            print(result)
+            print(type(result))
+        # if isinstance(result, list):
+        #     result_list = [format_expense_to_response(expense) for expense in result]
+        #     print(result_list)
+        #     return result_list
         if isinstance(result, list):
-            return [
-                format_expense_to_response(expense) for expense in result
-                ]
+            result_list = []
+            for expense in result:
+                try:
+                    formatted = format_expense_to_response(expense)
+                    result_list.append(formatted)
+                except Exception as e:
+                    print("❌ Ошибка при форматировании:", expense)
+                    print(e)
+            print(result_list)
+            return result_list
         return [result.get("message", "No data")]
 
 
@@ -169,16 +184,17 @@ async def create_expense(
         try:
             if URL:
                 response = await client.post(
-                    url=URL,
+                    url=f"{URL}/expenses",
                     json=expense.model_dump()
                 )
                 new_expense = response.json()
+                print(new_expense)
         except Exception as e:
             raise e
     async with AsyncClient() as client:
         if URL:
             remaining_plan = await get_remaining_of_category(
-                category=expense.category
+                category=expense.category.category_name
             )
 
     expense_str = format_expense_to_response(

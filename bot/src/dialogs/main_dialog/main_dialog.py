@@ -3,14 +3,14 @@ from aiogram_dialog import DialogManager, Dialog, Window
 from aiogram_dialog.widgets.input import TextInput, MessageInput, ManagedTextInput
 from aiogram_dialog.widgets.text import Const
 from aiogram_dialog.widgets.kbd import (
-    Row, Column, SwitchTo, Start
+    Row, SwitchTo, Start
 )
 from aiogram.types import Message
 from aiogram.enums import ContentType
-from bot.src.dialogs.filter_dialog.dialog_form import FilterSG
-from bot.src.schemas.schemas import CreatePlan
-from bot.src.dialogs.main_dialog.filters import is_expense_format, is_plan_format
-from bot.src.service.service import create_expense, create_plan
+from src.dialogs.filter_dialog.dialog_form import FilterSG
+from src.schemas.schemas import CreatePlan
+from src.dialogs.main_dialog.filters import is_expense_format, is_plan_format
+from src.service.service import create_expense, create_plan
 
 
 

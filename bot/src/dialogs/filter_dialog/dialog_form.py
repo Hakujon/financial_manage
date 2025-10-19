@@ -1,21 +1,24 @@
-from datetime import date
+from datetime import date, datetime
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import CallbackQuery
 from aiogram_dialog.api.entities import ChatEvent
 from aiogram_dialog import Window, DialogManager, Dialog
 from aiogram_dialog.widgets.kbd import (
     Button, Row, Calendar, ManagedCalendar,
-    Select, Next, SwitchTo, Back, Cancel
+    Select, SwitchTo, Back, Cancel
 )
 from aiogram_dialog.widgets.text import (
     Format, Const
 )
-from src.utils.utils import show_expenses
 from src.service.service import (
     get_categories,
     create_filter,
     get_exp_by_filters
 )
+
+from math import ceil
+
+PAGE_SIZE = 5
 
 
 class FilterSG(StatesGroup):
@@ -23,6 +26,7 @@ class FilterSG(StatesGroup):
     calendar_start_state = State()
     calendar_end_state = State()
     category_state = State()
+    expenses_state = State()
 
 
 async def clicked_time_button(callback: CallbackQuery,
@@ -34,7 +38,7 @@ async def clicked_time_button(callback: CallbackQuery,
 async def clicked_all_time_button(callback: CallbackQuery,
                                   button: Button,
                                   dialog_manager: DialogManager):
-    dialog_manager.dialog_data.pop("start_date", None)
+    dialog_manager.dialog_data["start_date"] = None
 
 
 first_window = Window(
@@ -123,20 +127,30 @@ async def clicked_category_button(
     item_id: str,
 ):
     dialog_manager.dialog_data["category"] = item_id
-    category = dialog_manager.dialog_data.get("category", "All")
-    start_date = dialog_manager.dialog_data.get("start_date")
-    end_date = dialog_manager.dialog_data.get("end_date")
-    filter = create_filter(
-        start_date=start_date,
-        end_date=end_date,
+
+    start = dialog_manager.dialog_data.get("start_date")
+    end = dialog_manager.dialog_data.get("end_date")
+
+    start_dt = datetime.fromisoformat(start) if start else None
+    end_dt = datetime.fromisoformat(end) if end else None
+    category = None if item_id == "All" else item_id
+
+    expense_filter = create_filter(
+        start_date=start_dt,
+        end_date=end_dt,
         category=category
     )
-    expenses = await get_exp_by_filters(filter)
-    await dialog_manager.done()
-    await show_expenses(
-        event=callback,
-        expenses=expenses
-    )
+
+    try:
+        expenses_from_api = await get_exp_by_filters(filter=expense_filter)
+    except Exception:
+        expenses_from_api = ["Ошибка при получении расходов"]
+
+    expenses = expenses_from_api if isinstance(expenses_from_api, list) else [str(expenses_from_api)]
+    dialog_manager.dialog_data["expenses"] = expenses
+    dialog_manager.dialog_data["page"] = 1
+
+    await dialog_manager.switch_to(FilterSG.expenses_state)
 
 
 async def get_categories_dict(
@@ -163,11 +177,99 @@ category_window = Window(
 )
 
 
+async def expenses_getter(dialog_manager: DialogManager, **kwargs) -> dict:
+    page = int(dialog_manager.dialog_data.get("page", 1))
+
+    expenses_cached = dialog_manager.dialog_data.get("expenses")
+
+    if expenses_cached is None:
+        start = dialog_manager.dialog_data.get("start_date")
+        end = dialog_manager.dialog_data.get("end_date")
+        category = dialog_manager.dialog_data.get("category")
+
+        if start:
+            start = datetime.fromisoformat(start)
+        if end:
+            end = datetime.fromisoformat(end)
+
+        expense_filter = create_filter(
+            start_date=start,
+            end_date=end,
+            category=(None if category == "All" else category)
+        )
+
+        expenses_from_api = await get_exp_by_filters(filter=expense_filter)
+        expenses = expenses_from_api if isinstance(expenses_from_api, list) else [str(expenses_from_api)]
+        dialog_manager.dialog_data["expenses"] = expenses
+        expenses_cached = expenses
+    expenses_list = expenses_cached
+
+    total = len(expenses_list)
+    total_pages = max(1, ceil(total / PAGE_SIZE))
+    if page < 1:
+        page = 1
+    if page > total_pages:
+        page = total_pages
+
+    start_idx = (page - 1) * PAGE_SIZE
+    end_idx = start_idx + PAGE_SIZE
+    page_items = expenses_list[start_idx:end_idx]
+
+    expenses_text = "\n\n".join(page_items) if page_items else "Нет расходов"
+
+    return {
+        "expenses_text": expenses_text,
+        "page": page,
+        "has_prev": page > 1,
+        "has_next": page < total_pages,
+        "page_str": f"{page}/{total_pages}",
+    }
+
+
+async def _change_page(callback: CallbackQuery, button: Button, dialog_manager: DialogManager, delta: int):
+    cur = int(dialog_manager.dialog_data.get("page", 1))
+    cur += delta
+    dialog_manager.dialog_data["page"] = cur
+    await dialog_manager.switch_to(FilterSG.expenses_state)
+
+
+async def prev_page(callback: CallbackQuery, button: Button, dialog_manager: DialogManager):
+    await _change_page(callback, button, dialog_manager, -1)
+
+
+async def next_page(callback: CallbackQuery, button: Button, dialog_manager: DialogManager):
+    await _change_page(callback, button, dialog_manager, 1)
+
+async def clear_dialog_data(callback: CallbackQuery, button: Button, dialog_manager: DialogManager):
+    dialog_manager.dialog_data.clear()
+
+
+expenses_window = Window(
+    Const("Расходы по заданным фильтрам:"),
+    Format("{expenses_text}"),
+    Row(
+        Button(Const("◀ Назад"), id="prev_page", on_click=prev_page, when="has_prev"),
+        Button(Format("{page_str}"), id="page_info"),
+        Button(Const("Вперед ▶"), id="next_page", on_click=next_page, when="has_next"),
+    ),
+    Row(SwitchTo(
+        text=Const("Изменить фильтры"),
+        id="change_filters",
+        state=FilterSG.first_state,
+        on_click=clear_dialog_data,
+    )),
+    Row(Back(Const("Назад")), Cancel(Const("Выход"))),
+    getter=expenses_getter,
+    state=FilterSG.expenses_state
+)
+
+
 windows = (
     first_window,
     calendar_start_window,
     calendar_end_window,
-    category_window
+    category_window,
+    expenses_window,
 )
 
 
