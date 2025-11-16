@@ -126,19 +126,8 @@ async def get_exp_by_filters(
             result = response.json()
             print(result)
             print(type(result))
-        # if isinstance(result, list):
-        #     result_list = [format_expense_to_response(expense) for expense in result]
-        #     print(result_list)
-        #     return result_list
         if isinstance(result, list):
-            result_list = []
-            for expense in result:
-                try:
-                    formatted = format_expense_to_response(expense)
-                    result_list.append(formatted)
-                except Exception as e:
-                    print("❌ Ошибка при форматировании:", expense)
-                    print(e)
+            result_list = [format_expense_to_response(expense) for expense in result]
             print(result_list)
             return result_list
         return [result.get("message", "No data")]

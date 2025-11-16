@@ -15,6 +15,10 @@ from src.service.service import (
     create_filter,
     get_exp_by_filters
 )
+from src.service.utils import (
+    get_start_of_week, get_end_of_week,
+    get_start_of_month
+)
 
 from math import ceil
 
@@ -29,16 +33,29 @@ class FilterSG(StatesGroup):
     expenses_state = State()
 
 
-async def clicked_time_button(callback: CallbackQuery,
-                              button: Button,
-                              dialog_manager: DialogManager):
-    dialog_manager.dialog_data["start_date"] = callback.data
+async def clicked_this_week_button(callback: CallbackQuery,
+                                   button: Button,
+                                   dialog_manager: DialogManager):
+    start_of_week = get_start_of_week()
+    print(start_of_week)
+    dialog_manager.dialog_data["start_date"] = start_of_week
+    dialog_manager.dialog_data["end_date"] = None
+
+
+async def clicked_this_month_button(callback: CallbackQuery,
+                                    button: Button,
+                                    dialog_manager: DialogManager):
+    start_of_month = get_start_of_month()
+    print(start_of_month)
+    dialog_manager.dialog_data["start_date"] = start_of_month
+    dialog_manager.dialog_data["end_date"] = None
 
 
 async def clicked_all_time_button(callback: CallbackQuery,
                                   button: Button,
                                   dialog_manager: DialogManager):
     dialog_manager.dialog_data["start_date"] = None
+    dialog_manager.dialog_data["end_date"] = None
 
 
 first_window = Window(
@@ -53,13 +70,13 @@ first_window = Window(
         SwitchTo(
             text=Const("За эту неделю"),
             id="this_week",
-            on_click=clicked_time_button,
+            on_click=clicked_this_week_button,
             state=FilterSG.category_state
         ),
         SwitchTo(
             text=Const("За этот месяц"),
             id="this_month",
-            on_click=clicked_time_button,
+            on_click=clicked_this_month_button,
             state=FilterSG.category_state,
         )
     ),
